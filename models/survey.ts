@@ -2,7 +2,7 @@ export interface Survey{
     id?: string;
     host_id: string;
     title: string;
-    code?: number;
+    code?: string;
     status: string;
     time_created?: string;
 }

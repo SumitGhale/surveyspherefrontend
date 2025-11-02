@@ -1,7 +1,7 @@
 import QuestionCard from "@/components/question_card";
 import { Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { getAllQuestions } from "@/services/question_services";
 import { useEffect } from "react";
 import { Question } from "@/models/question";
@@ -14,16 +14,19 @@ export default function EditSurveyScreen() {
   const { questions, setQuestions } = useQuestions();
   const scrollY = useSharedValue(0);
 
+  const {surveyId} = useLocalSearchParams();
+
   useEffect(() => {
-    if (questions.length === 0) {
+
+     setQuestions([]);
+     
       const fetchQuestions = async () => {
-        const fetchedQuestions = await getAllQuestions();
+        const fetchedQuestions = await getAllQuestions(surveyId as string);
         if (fetchedQuestions) {
           setQuestions(fetchedQuestions);
         }
       };
       fetchQuestions();
-    }
     const socket = io("http://192.168.1.163:8000");
 
     socket.on("connect", () => {
@@ -57,7 +60,7 @@ export default function EditSurveyScreen() {
       });
     };
     socket.on("newQuestion", handleIncoming);
-  }, []);
+  }, [surveyId, setQuestions]);
 
     const handleEdit = (question: Question) => {
     if (!question) return;
@@ -73,7 +76,7 @@ export default function EditSurveyScreen() {
 
   return (
 
-    questions.length === 0 ? <LoadingSpinner /> :
+    !questions ? <LoadingSpinner /> :
     <SafeAreaView
       edges={["left", "right", "bottom"]}
       style={{ flex: 1, backgroundColor: "#f5f5f5"}}

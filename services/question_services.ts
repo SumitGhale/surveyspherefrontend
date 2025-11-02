@@ -1,6 +1,6 @@
 import { Question } from "@/models/question";
 
-const BASE_URL = process.env.BASE_URL;
+const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
 // Implementation for creating a question
 export const createQuestion = async (question: Question) => {
   try {
@@ -26,10 +26,10 @@ export const createQuestion = async (question: Question) => {
 };
 
 // Implementation for getting all questions
-export const getAllQuestions = async () => {
+export const getAllQuestions = async (survey_id:string) => {
   try {
     const response = await fetch(
-      `${BASE_URL}questions/c8440905-5073-4e05-b2fb-ad0d44538c9a`,
+      `${BASE_URL}questions/${survey_id}`,
       {
         method: "GET",
         headers: {
