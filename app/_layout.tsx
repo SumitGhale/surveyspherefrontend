@@ -35,6 +35,20 @@ export default function RootLayout() {
                   headerTitleAlign: "center",
                 }}
               />
+              <Stack.Screen
+                name="survey_participant_view"
+                options={{
+                  title: "Survey",
+                  headerTitleAlign: "center",
+                }}
+              />
+              <Stack.Screen
+                name="question-builder"
+                options={{
+                  title: "Question Builder",
+                  headerTitleAlign: "center",
+                }}
+              />
             </Stack>
             <StatusBar style="auto" />
           </SurveyProvider>

@@ -1,7 +1,5 @@
 import FilledButton from "@/components/ui/filled_button";
 import GreyTextField from "@/components/ui/grey_text_field";
-import PartiallyFilledButtons from "@/components/ui/partially_filled_buttons";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { router } from "expo-router";
 import {
   ScrollView,
@@ -11,20 +9,28 @@ import {
   Modal,
   TextInput,
   Pressable,
+  ActivityIndicator,
+  KeyboardAvoidingView,
 } from "react-native";
 import Card from "../../components/ui/white-container";
 import "../../global.css";
 import SurveyCard from "@/components/survey-card";
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { getAllSurveys, createSurvey } from "@/services/survey_services";
 import { useSurveys } from "@/contexts/surveyContext";
-import LoadingSpinner from "@/components/ui/loading_spinner";
 import { Survey } from "@/models/survey";
+import { io } from "socket.io-client";
+import JoinIcon from "@/components/icons/join-icon";
+import CreateIcon from "@/components/icons/create-icon";
+import PollyLogo from "@/components/icons/poly-logo";
 
 export default function HomeScreen() {
   const { surveys, setSurveys } = useSurveys();
   const [projectTitle, setProjectTitle] = useState("");
   const [modalVisible, setmodalVisible] = useState(false);
+  const [code, setCode] = useState("");
+  const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
+
   useEffect(() => {
     const fetchSurveys = async () => {
       const surveyList = await getAllSurveys();
@@ -33,7 +39,45 @@ export default function HomeScreen() {
       }
     };
     fetchSurveys();
+
+    const socket = io(BASE_URL);
+
+    socket.on("connect", () => {
+      console.log("Socket connected:", socket.id);
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("Socket connect_error:", err?.message);
+    });
+
+    const handleIncoming = (payload: any) => {
+      const raw = Array.isArray(payload) ? payload[0] : payload;
+      if (!raw) return;
+
+      const newSurvey: Survey = {
+        id: raw.id,
+        host_id: raw.host_id,
+        title: raw.title ?? "",
+        code: raw.code ?? "",
+        status: raw.status ?? "draft",
+        time_created: raw.time_created ?? "",
+      };
+
+      setSurveys((prev) => [...prev, newSurvey]);
+
+      return () => {
+        socket.off("surveyCreated", handleIncoming);
+        socket.disconnect();
+      };
+    };
+    socket.on("surveyCreated", handleIncoming);
   }, []);
+
+  const joinSurvey = () => {
+    // emit join survey event
+    const socket = io(BASE_URL);
+    router.push({ pathname: "./survey_participant_view", params: { code } });
+  };
 
   const navigateToQuestions = (surveyId: string) => {
     router.push({
@@ -61,44 +105,49 @@ export default function HomeScreen() {
   };
   return (
     <ScrollView
-      style={{ flex: 1, paddingHorizontal: 16, backgroundColor: "#F5F5F5" }}
+      style={{ flex: 1, paddingHorizontal: 16 }}
+      className="bg-background-gray"
     >
       <View
-        className="flex-row items-center justify-center my-6"
+        className="flex-row items-center mt-2"
         style={styles.titleContainer}
       >
-        <MaterialCommunityIcons
-          name="ballot-outline"
-          size={30}
-          color="#15A4EC"
-        />
-        <Text className="font-bold text-xl my-4 ">SurveySphere</Text>
+        <PollyLogo size={40} />
+        <Text className="font-bold text-xl my-4 ">Poly</Text>
       </View>
 
       {/* join survey card */}
       <Card>
-        <Text className="text-2xl font-semibold text-gray-800 mb-2">
-          Join a survey
-        </Text>
+        <View className="flex-row">
+          <JoinIcon size={30} color="#059669" />
+          <Text className="text-2xl font-semibold text-gray-800 mx-2 mb-2">
+            Join a survey
+          </Text>
+        </View>
+
         <View className="flex-row items-center justify-between gap-4">
           <GreyTextField
-            value=""
-            onChangeText={() => {}}
+            value={code}
+            onChangeText={setCode}
             placeholder="Enter your survey code"
           />
-          <FilledButton />
+          <FilledButton label="Join" onPress={() => joinSurvey()} />
         </View>
       </Card>
 
       {/* create survey card */}
-      <Card>
-        <Text className="text-2xl font-semibold text-gray-800">
-          Create a new survey
-        </Text>
+      <Card classname="">
+        <View className="flex-row items-center gap-2 mb-2">
+          <CreateIcon size={30} color="#059669" />
+          <Text className="text-2xl font-semibold text-gray-800">
+            Create a new survey
+          </Text>
+        </View>
+
         <Text className="text-sm text-gray-500 my-4 tracking-wide">
           Engage your audience with real-time {"\n"}feedback
         </Text>
-        <PartiallyFilledButtons onPress={() => setmodalVisible(true)} />
+        <FilledButton label=" + Create" onPress={() => setmodalVisible(true)} />
       </Card>
 
       {/* projects section */}
@@ -109,7 +158,7 @@ export default function HomeScreen() {
       <View className=" flex flex-row flex-wrap justify-between ">
         {surveys.length === 0 ? (
           <View className="w-full items-center justify-center py-10">
-            <LoadingSpinner />
+            <ActivityIndicator size="large" color="#15A4EC" />
           </View>
         ) : (
           surveys.map((survey) => (
@@ -134,7 +183,7 @@ export default function HomeScreen() {
           // Handle modal close if needed
         }}
       >
-        <View className="flex-1 items-center justify-center bg-black/50">
+        <KeyboardAvoidingView className="flex-1 items-center justify-center bg-black/50">
           <View className="bg-white border-b border-gray-300 rounded-lg w-[90%] max-w-md">
             <View className="border-b mb-6 border-gray-300">
               <Text className="m-5 text-xl font-semibold">
@@ -158,17 +207,20 @@ export default function HomeScreen() {
               <View className="mb-6 flex-row justify-between">
                 <Pressable
                   onPress={() => setmodalVisible(false)}
-                  className="p-4 w-[120px] rounded-lg bg-background-gray "
+                  className="p-4 w-[120px] rounded-lg bg-card-background "
                 >
                   <Text className="text-center">Cancel</Text>
                 </Pressable>
-                <Pressable onPress={() => createNewSurvey(projectTitle)} className="p-4 w-[120px] rounded-lg bg-primary-blue ">
+                <Pressable
+                  onPress={() => createNewSurvey(projectTitle.trim())}
+                  className="p-4 w-[120px] active:bg-active-bluerounded-lg bg-primary-blue "
+                >
                   <Text className="text-white text-center">Create</Text>
                 </Pressable>
               </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </ScrollView>
   );

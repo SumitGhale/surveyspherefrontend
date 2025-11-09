@@ -14,7 +14,7 @@ export default function UnderlineTextField({
     className = "",
 }: TextFieldProps) {
     return (
-        <View className="w-[100%] my-3 self-center flex-1">
+        <View className="w-[100%] my-3 self-center ">
             <TextInput
                 className={`border-b border-gray-300 p-4 text-gray-800 ${className}`}
                 placeholder={placeholder}

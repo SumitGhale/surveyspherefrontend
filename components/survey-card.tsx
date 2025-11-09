@@ -12,11 +12,11 @@ export default function Survey({ status, title, questions, onPress }: surveyType
     <Pressable
       onPress={ onPress}
       style={{ width: "48%" }}
-      className="bg-white border border-gray-300 rounded-lg  my-4 pt-4"
+      className="bg-white active:bg-active-blue border border-gray-300 rounded-lg  my-4 pt-4"
     >
       <View
         className={`mx-4 mb-2 p-2 rounded-lg self-start ${
-          status === "completed" ? "bg-green-100" : "bg-secondary-blue"
+          status === "completed" ? "bg-green-100" : "bg-primary-blue/5"
         }`}
       >
         <Text

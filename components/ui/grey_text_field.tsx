@@ -18,7 +18,7 @@ export default function GreyTextField({
                 placeholder={placeholder}
                 placeholderTextColor="#9ca3af" // Tailwind gray-400
                 value={value}
-                onChangeText={onChangeText}
+                onChangeText={(text) => onChangeText(text)}
             />
         </View>
     );

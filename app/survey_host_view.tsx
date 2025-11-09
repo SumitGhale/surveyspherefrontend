@@ -1,0 +1,185 @@
+import { View, Text, Pressable } from "react-native";
+import { useQuestions } from "@/contexts/questionContext";
+import { useRef, useState, useEffect } from "react";
+import { io, Socket } from "socket.io-client";
+import { useLocalSearchParams } from "expo-router";
+import BarGraph from "@/components/bar_graph";
+import Pie_Chart from "@/components/pie_Chart";
+import WordCloudComponent from "@/components/word_cloud";
+import { getResponsesByQuestion } from "@/services/response_service";
+import { Response } from "@/models/response";
+import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
+
+export default function SurveyHostView() {
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const { questions, setQuestions } = useQuestions();
+  const { roomCode } = useLocalSearchParams();
+  const [responses, setResponse] = useState<Response[] | null>(null);
+
+  const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
+  const socketRef = useRef<Socket | null>(null);
+
+  useEffect(() => {
+    // Fetch responses whenever the current question changes
+    const getResponses = async () => {
+      if (!questions) return;
+      const questionId = questions[currentQuestionIndex]?.id;
+      if (!questionId) return;
+      const res = await getResponsesByQuestion(questionId);
+      console.log("Fetched responses for question:", res);
+      setResponse(res);
+    };
+    getResponses();
+
+    if (!BASE_URL) return;
+
+    const socket = io(BASE_URL, { transports: ["websocket"] });
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      console.log("Host connected:", socket.id);
+
+      // Handle socket events - joining room
+      socket.emit("joinRoom", roomCode, "host", (response: any) => {
+        if (!response?.success) {
+          console.error("Host failed to join:", response?.message);
+        }
+      });
+    });
+
+    socket.on("newResponse", (data: any) => {
+      console.log("New response received:", data);
+      // Refresh responses for the current question
+      const getResponses = async () => {
+        if (!questions) return;
+        const questionId = questions[currentQuestionIndex]?.id;
+        if (!questionId) return;
+        const res = await getResponsesByQuestion(questionId);
+        console.log("Fetched responses for question:", res);
+        setResponse(res);
+      };
+      getResponses();
+    });
+
+    socket.on("connect_error", (err) =>
+      console.error("Host socket error:", err)
+    );
+    socket.on("disconnect", () => console.log("Host socket disconnected"));
+
+    return () => {
+      socket.off("connect");
+      socket.off("connect_error");
+      socket.off("disconnect");
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [BASE_URL, roomCode, currentQuestionIndex]);
+
+  //  code to render different result components based on question type
+  const renderResult = () => {
+    if (!responses) return null;
+
+    switch (questions[currentQuestionIndex].type) {
+      case "multiple choice":
+        return barChart(responses);
+      case "open-ended":
+        return wordCloud(responses);
+      case "rating":
+        return barChart(responses);
+      case "yes/no":
+        return pieChart(responses);
+      default:
+        return <Text>No results available for this question type.</Text>;
+    }
+  };
+
+  const nextQuestion = () => {
+    if (!socketRef.current) return;
+    if (currentQuestionIndex >= questions.length - 1) {
+      console.log("Survey ended");
+      return;
+    }
+    const nextIndex = currentQuestionIndex + 1;
+    setCurrentQuestionIndex(nextIndex);
+    socketRef.current.emit("nextQuestion", {
+      roomCode: roomCode,
+      questionIndex: nextIndex,
+    });
+  };
+
+  return (
+    <View className="p-3 bg-background-gray flex-1">
+      <Text className="font-bold text-3xl tracking-wider">
+        {questions[currentQuestionIndex].text}
+      </Text>
+
+      {/* Result Display */}
+      <View className="mt-6 mx-auto ">{renderResult()}</View>
+
+      {/* Question Navigation */}
+      <View className="mt-auto">
+        <Pressable
+          onPress={nextQuestion}
+          className="bg-primary-blue p-3 my-2 rounded-lg items-center justify-end"
+        >
+          <Text className="text-white">Next Question</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => console.log("Survey ended")}
+          className=" p-3 my-2 rounded-lg items-center "
+        >
+          <Text className="text-red-500">End Survey</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function responseToChartData(responses: Response[]) {
+  const answerCounts = responses.reduce(
+    (acc, response) => {
+      const answer = response.answer;
+      acc[answer] = (acc[answer] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
+
+  return Object.entries(answerCounts).map(([text, value]) => ({
+    text: text,
+    label: text,
+    value: value,
+  }));
+}
+
+function barChart(responses: Response[]) {
+  const data = responseToChartData(responses);
+  console.log("Bar chart data:", data);
+  return responses.length > 0 ? (
+    <BarGraph data={data} />
+  ) : (
+    <Text>No responses yet.</Text>
+  );
+}
+
+function pieChart(responses: Response[]) {
+  const data = responseToChartData(responses);
+  console.log("Pie chart data:", data);
+  return responses.length > 0 ? (
+    <Pie_Chart data={data} />
+  ) : (
+    <Text>No responses yet.</Text>
+  );
+}
+
+function wordCloud(responses: Response[]) {
+  return responses.length > 0 ? (
+    <WordCloudComponent
+      key={`wordcloud-${responses.length}`}
+      words={responseToChartData(responses)}
+    />
+  ) : (
+    <Text>No responses yet.</Text>
+  );
+}
