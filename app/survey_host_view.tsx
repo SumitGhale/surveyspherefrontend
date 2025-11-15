@@ -2,19 +2,21 @@ import { View, Text, Pressable } from "react-native";
 import { useQuestions } from "@/contexts/questionContext";
 import { useRef, useState, useEffect } from "react";
 import { io, Socket } from "socket.io-client";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import BarGraph from "@/components/bar_graph";
 import Pie_Chart from "@/components/pie_Chart";
 import WordCloudComponent from "@/components/word_cloud";
 import { getResponsesByQuestion } from "@/services/response_service";
 import { Response } from "@/models/response";
-import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
+import { Modal } from "react-native";
+import Animated, { SlideInRight } from "react-native-reanimated";
 
 export default function SurveyHostView() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const { questions, setQuestions } = useQuestions();
   const { roomCode } = useLocalSearchParams();
   const [responses, setResponse] = useState<Response[] | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
   const socketRef = useRef<Socket | null>(null);
@@ -107,8 +109,14 @@ export default function SurveyHostView() {
     });
   };
 
+  const endSurvey = () => {
+    setModalVisible(false);
+    socketRef.current?.emit("endSurvey", { roomCode });
+    router.replace("/(tabs)");
+  };
+
   return (
-    <View className="p-3 bg-background-gray flex-1">
+    <Animated.View key={currentQuestionIndex} entering={SlideInRight.duration(400)} className="p-3 bg-background-gray flex-1">
       <Text className="font-bold text-3xl tracking-wider">
         {questions[currentQuestionIndex].text}
       </Text>
@@ -126,13 +134,53 @@ export default function SurveyHostView() {
         </Pressable>
 
         <Pressable
-          onPress={() => console.log("Survey ended")}
+          onPress={() => setModalVisible(true)}
           className=" p-3 my-2 rounded-lg items-center "
         >
           <Text className="text-red-500">End Survey</Text>
         </Pressable>
       </View>
-    </View>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View className="flex-1 items-center justify-center bg-black/50">
+          <View className="bg-white rounded-lg w-[90%] max-w-md">
+            <View className="border-b mb-4 border-gray-300">
+              <Text className="m-4 text-xl text-center font-semibold">
+                Delete Question
+              </Text>
+            </View>
+            <View className="px-5">
+              <Text className="text-lg mb-2">Are you sure?</Text>
+              <Text className="text-sm mb-6 text-gray-500">
+                This action cannot be undone. The question will be permanently
+                deleted.
+              </Text>
+
+              <View className="mb-6 flex-row justify-between">
+                <Pressable
+                  onPress={() => {
+                    setModalVisible(false);
+                  }}
+                  className="p-4 w-[120px] rounded-lg bg-card-background"
+                >
+                  <Text className="text-center">Cancel</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => endSurvey()}
+                  className="p-4 w-[120px] active:bg-red-700 rounded-lg bg-red-600"
+                >
+                  <Text className="text-white text-center">End Survey</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </Animated.View>
   );
 }
 

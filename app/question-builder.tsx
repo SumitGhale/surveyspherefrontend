@@ -1,4 +1,10 @@
-import { Pressable, ScrollView, Text, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import { useEffect, useState } from "react";
 import DeleteIcon from "../components/icons/trash";
 import Card from "@/components/ui/white-container";
@@ -9,6 +15,58 @@ import FilledButton from "@/components/ui/filled_button";
 import { createQuestion, updateQuestion } from "@/services/question_services";
 import { Question } from "@/models/question";
 import { router } from "expo-router";
+
+function MultipleChoiceOptions({
+  options,
+  setOptions,
+}: {
+  options: string[];
+  setOptions: (opts: string[]) => void;
+}) {
+  const handleAddOption = () => {
+    setOptions([...options, ""]);
+  };
+
+  const handleOptionChange = (text: string, index: number) => {
+    const newOptions = [...options];
+    newOptions[index] = text;
+    setOptions(newOptions);
+  };
+
+  const handleRemoveOption = (index: number) => {
+    if (options.length > 2) {
+      const newOptions = options.filter((_, i) => i !== index);
+      setOptions(newOptions);
+    }
+  };
+
+  return (
+    <Card>
+      <Text className="text-gray-600 text-xl mb-2">Options</Text>
+      {options.map((option, index) => (
+        <View key={index} className="flex-row items-center mb-2">
+          <UnderlineTextField
+            placeholder={`Option ${index + 1}`}
+            value={option}
+            onChangeText={(text) => handleOptionChange(text, index)}
+            className="flex-1"
+          />
+          {options.length > 2 && (
+            <Pressable
+              onPress={() => handleRemoveOption(index)}
+              className="ml-2"
+            >
+              <Text className="text-red-500 text-2xl">×</Text>
+            </Pressable>
+          )}
+        </View>
+      ))}
+      <Pressable className="mt-2" onPress={handleAddOption}>
+        <Text className="text-blue-500">+ Add Option</Text>
+      </Pressable>
+    </Card>
+  );
+}
 
 export default function QuestionBuilder() {
   const [options, setOptions] = useState<string[]>(["", ""]);
@@ -58,53 +116,6 @@ export default function QuestionBuilder() {
     }
   };
 
-  // Component for Multiple Choice options
-  function MultipleChoiceOptions() {
-    const handleAddOption = () => {
-      setOptions([...options, ""]);
-    };
-
-    const handleOptionChange = (text: string, index: number) => {
-      const newOptions = [...options];
-      newOptions[index] = text;
-      setOptions(newOptions);
-    };
-
-    const handleRemoveOption = (index: number) => {
-      if (options.length > 2) {
-        const newOptions = options.filter((_, i) => i !== index);
-        setOptions(newOptions);
-      }
-    };
-
-    return (
-      <Card>
-        <Text className="text-gray-600 text-xl mb-2">Options</Text>
-        {options.map((option, index) => (
-          <View key={index} className="flex-row items-center mb-2">
-            <UnderlineTextField
-              placeholder={`Option ${index + 1}`}
-              value={option}
-              onChangeText={(text) => handleOptionChange(text, index)}
-              className="flex-1"
-            />
-            {options.length > 2 && (
-              <Pressable
-                onPress={() => handleRemoveOption(index)}
-                className="ml-2"
-              >
-                <Text className="text-red-500">×</Text>
-              </Pressable>
-            )}
-          </View>
-        ))}
-        <Pressable className="mt-2 active:bg-active-blue" onPress={handleAddOption}>
-          <Text className="text-blue-500">+ Add Option</Text>
-        </Pressable>
-      </Card>
-    );
-  }
-
   // Component for Rating scale
   function RatingOptions() {
     return (
@@ -140,7 +151,7 @@ export default function QuestionBuilder() {
     );
   }
 
-  // Component for Word Cloud 
+  // Component for Word Cloud
   function WordCloudOptions() {
     return (
       <Card>
@@ -151,11 +162,13 @@ export default function QuestionBuilder() {
       </Card>
     );
   }
-  
+
   const renderOptionsComponent = () => {
     switch (typeKey) {
       case "multiple choice":
-        return <MultipleChoiceOptions />;
+        return (
+          <MultipleChoiceOptions options={options} setOptions={setOptions} />
+        );
       case "rating":
         return <RatingOptions />;
       case "open-ended":
@@ -171,35 +184,37 @@ export default function QuestionBuilder() {
 
   return (
     <ScrollView className="flex-1 bg-background-grey p-4">
-      <View className="flex-row items-center justify-between my-5">
-        <View className="flex-row gap-2 items-center">
-          <Text className="text-xl ">{meta.icon}</Text>
-          <Text className="text-xl font-semibold tracking-wider">
-            {meta.title}
-          </Text>
+      <KeyboardAvoidingView>
+        <View className="flex-row items-center justify-between my-5">
+          <View className="flex-row gap-2 items-center">
+            <Text className="text-xl ">{meta.icon}</Text>
+            <Text className="text-xl font-semibold tracking-wider">
+              {meta.title}
+            </Text>
+          </View>
         </View>
-      </View>
 
-      {/* Question Input */}
-      <Card>
-        <Text className="text-gray-600 text-xl mb-2">Question</Text>
-        <UnderlineTextField
-          value={questionText}
-          onChangeText={setQuestionText}
-          placeholder="What would you like to ask?"
+        {/* Question Input */}
+        <Card>
+          <Text className="text-gray-600 text-xl mb-2">Question</Text>
+          <UnderlineTextField
+            value={questionText}
+            onChangeText={setQuestionText}
+            placeholder="What would you like to ask?"
+          />
+        </Card>
+
+        {/* Options Input */}
+        {renderOptionsComponent()}
+
+        <FilledButton
+          label={`${parsedQuestion ? "Update" : "Create"} Question`}
+          classname="my-2"
+          onPress={() => {
+            parsedQuestion ? callUpdateQuestion() : callCreateQuestion();
+          }}
         />
-      </Card>
-
-      {/* Options Input */}
-      {renderOptionsComponent()}
-
-      <FilledButton
-        label={`${parsedQuestion ? "Update" : "Create"} Question`}
-        classname="my-2"
-        onPress={() => {
-          parsedQuestion ? callUpdateQuestion() : callCreateQuestion();
-        }}
-      />
+      </KeyboardAvoidingView>
     </ScrollView>
   );
 }

@@ -23,6 +23,7 @@ import { io } from "socket.io-client";
 import JoinIcon from "@/components/icons/join-icon";
 import CreateIcon from "@/components/icons/create-icon";
 import PollyLogo from "@/components/icons/poly-logo";
+import UserIcon from "@/components/icons/user-icon";
 
 export default function HomeScreen() {
   const { surveys, setSurveys } = useSurveys();
@@ -109,11 +110,16 @@ export default function HomeScreen() {
       className="bg-background-gray"
     >
       <View
-        className="flex-row items-center mt-2"
+        className="flex-row items-center mt-2 justify-between"
         style={styles.titleContainer}
       >
-        <PollyLogo size={40} />
-        <Text className="font-bold text-xl my-4 ">Poly</Text>
+        <View className="flex-row items-center gap-2">
+          <PollyLogo size={40} />
+          <Text className="font-bold text-xl my-4 ">Poly</Text>
+        </View>
+        <Pressable onPress={() => router.push("/profile")} style={{ marginRight: 16 }}>
+          <UserIcon size={35} />
+        </Pressable>
       </View>
 
       {/* join survey card */}
@@ -158,7 +164,7 @@ export default function HomeScreen() {
       <View className=" flex flex-row flex-wrap justify-between ">
         {surveys.length === 0 ? (
           <View className="w-full items-center justify-center py-10">
-            <ActivityIndicator size="large" color="#15A4EC" />
+            <ActivityIndicator size="large" color="#059669" />
           </View>
         ) : (
           surveys.map((survey) => (

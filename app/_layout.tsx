@@ -10,9 +10,9 @@ import QuestionProvider from "@/contexts/questionContext";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import SurveyProvider from "@/contexts/surveyContext";
 
-export const unstable_settings = {
-  anchor: "(tabs)",
-};
+// export const unstable_settings = {
+//   anchor: "(tabs)",
+// };
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -23,6 +23,14 @@ export default function RootLayout() {
         <QuestionProvider>
           <SurveyProvider>
             <Stack>
+              <Stack.Screen
+                name="index"
+                options={{ title: "Login", headerTitleAlign: "center" }}
+              />
+              <Stack.Screen
+                name = "signup"
+                options={{ title: "Sign Up", headerTitleAlign: "center", headerShown: false }}
+              />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen
                 name="edit_survey"
@@ -47,6 +55,12 @@ export default function RootLayout() {
                 options={{
                   title: "Question Builder",
                   headerTitleAlign: "center",
+                }}
+              />
+              <Stack.Screen
+                name="profile"
+                options={{
+                  headerShown: false,
                 }}
               />
             </Stack>

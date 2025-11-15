@@ -6,6 +6,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import PollyLogo from "@/components/icons/poly-logo";
+import UserIcon from "@/components/icons/user-icon";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -30,6 +31,11 @@ export default function TabLayout() {
           headerLeft: () => (
             <View style={{ marginLeft: 16 }}>
               <PollyLogo size={40} />
+            </View>
+          ),
+          headerRight: () => (
+            <View style={{marginRight: 16 }}>
+              <UserIcon size={32} />
             </View>
           ),
         }}
