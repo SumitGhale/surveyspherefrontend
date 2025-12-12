@@ -9,6 +9,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import QuestionProvider from "@/contexts/questionContext";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import SurveyProvider from "@/contexts/surveyContext";
+import { UserProvider } from "@/contexts/userContext";
 
 // export const unstable_settings = {
 //   anchor: "(tabs)",
@@ -22,10 +23,13 @@ export default function RootLayout() {
       <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
         <QuestionProvider>
           <SurveyProvider>
+            <UserProvider>
             <Stack>
               <Stack.Screen
                 name="index"
-                options={{ title: "Login", headerTitleAlign: "center" }}
+                options={{ title: "Login", headerTitleAlign: "center" ,
+                headerShown: false
+                }}
               />
               <Stack.Screen
                 name = "signup"
@@ -65,6 +69,7 @@ export default function RootLayout() {
               />
             </Stack>
             <StatusBar style="auto" />
+            </UserProvider>
           </SurveyProvider>
         </QuestionProvider>
       </ThemeProvider>

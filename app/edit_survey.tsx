@@ -5,6 +5,7 @@ import {
   View,
   Modal,
   KeyboardAvoidingView,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -46,7 +47,7 @@ export default function EditSurveyScreen() {
       }
     };
     fetchQuestions();
-    const socket = io("http://192.168.1.163:8000");
+    const socket = io("http://192.168.1.210:8000");
 
     socket.on("connect", () => {
       console.log("Socket connected:", socket.id);
@@ -81,7 +82,7 @@ export default function EditSurveyScreen() {
   }, [surveyId, setQuestions]);
 
   const createRoom = () => {
-    const socket = io("http://192.168.1.163:8000");
+    const socket = io("http://192.168.1.210:8000");
 
     socket.emit(
       "createRoom",
@@ -112,9 +113,10 @@ export default function EditSurveyScreen() {
     if (!question) return;
     router.push({
       pathname: "./question-builder",
-      params: { question: JSON.stringify(question),
+      params: {
+        question: JSON.stringify(question),
         questionType: question.type,
-       },
+      },
     });
   };
 
@@ -141,7 +143,9 @@ export default function EditSurveyScreen() {
   });
 
   return loading ? (
-    <LoadingSpinner />
+    <View className="flex-1 justify-center items-center">
+    <ActivityIndicator size="large" color="#059669" />  
+    </View>
   ) : (
     <SafeAreaView
       edges={["left", "right", "bottom"]}

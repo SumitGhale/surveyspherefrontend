@@ -10,6 +10,7 @@ import { getResponsesByQuestion } from "@/services/response_service";
 import { Response } from "@/models/response";
 import { Modal } from "react-native";
 import Animated, { SlideInRight } from "react-native-reanimated";
+import * as Clipboard from "expo-clipboard";
 
 export default function SurveyHostView() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -17,9 +18,16 @@ export default function SurveyHostView() {
   const { roomCode } = useLocalSearchParams();
   const [responses, setResponse] = useState<Response[] | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [participantCount, setParticipantCount] = useState(3); // Mock count, update from socket
 
   const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
   const socketRef = useRef<Socket | null>(null);
+
+  const copyToClipboard = async () => {
+    await Clipboard.setStringAsync(roomCode as string);
+    // Optional: Show toast/alert
+    console.log("Code copied!");
+  };
 
   useEffect(() => {
     // Fetch responses whenever the current question changes
@@ -116,30 +124,78 @@ export default function SurveyHostView() {
   };
 
   return (
-    <Animated.View key={currentQuestionIndex} entering={SlideInRight.duration(400)} className="p-3 bg-background-gray flex-1">
-      <Text className="font-bold text-3xl tracking-wider">
+    <Animated.View
+      key={currentQuestionIndex}
+      entering={SlideInRight.duration(400)}
+      className="p-3 bg-background-gray flex-1"
+    >
+      {/* Survey Code Header */}
+      <View className="bg-primary-blue rounded-xl p-4 mb-4">
+        <View className="flex-row items-center justify-between mb-2">
+          <View>
+            <Text className="text-white/80 text-xs uppercase tracking-wide mb-1">
+              Survey Code
+            </Text>
+            <Text className="text-white text-3xl font-bold tracking-widest">
+              {roomCode}
+            </Text>
+          </View>
+          <View className="items-center">
+            <View className="flex-row items-center mb-1">
+              <Text className="text-white text-2xl font-semibold mr-1">
+                {participantCount}
+              </Text>
+              <Text className="text-white/80 text-xs">👥</Text>
+            </View>
+            <Text className="text-white/60 text-xs">participants</Text>
+          </View>
+        </View>
+        <View className="flex-row items-center justify-between">
+          <Text className="text-white/70 text-xs flex-1">
+            Share this code with participants to join
+          </Text>
+          <Pressable
+            onPress={copyToClipboard}
+            className="bg-white/20 active:bg-white/30 px-4 py-2 rounded-lg flex-row items-center"
+          >
+            <Text className="text-white text-sm font-semibold">📋 Copy</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <Text className="font-bold text-3xl tracking-wider mb-6">
         {questions[currentQuestionIndex].text}
       </Text>
 
       {/* Result Display */}
-      <View className="mt-6 mx-auto ">{renderResult()}</View>
+      <View className="mt-6 mx-auto">{renderResult()}</View>
 
       {/* Question Navigation */}
       <View className="mt-auto">
         <Pressable
           onPress={nextQuestion}
-          className="bg-primary-blue p-3 my-2 rounded-lg items-center justify-end"
+          disabled={currentQuestionIndex >= questions.length - 1}
+          className={`p-3 my-2 rounded-lg items-center ${
+            currentQuestionIndex >= questions.length - 1
+              ? "bg-gray-400"
+              : "bg-primary-blue"
+          }`}
         >
-          <Text className="text-white">Next Question</Text>
+          <Text className="text-white">
+            {currentQuestionIndex >= questions.length - 1
+              ? "Last Question"
+              : "Next Question"}
+          </Text>
         </Pressable>
 
         <Pressable
           onPress={() => setModalVisible(true)}
-          className=" p-3 my-2 rounded-lg items-center "
+          className="p-3 my-2 rounded-lg items-center"
         >
           <Text className="text-red-500">End Survey</Text>
         </Pressable>
       </View>
+
       <Modal
         animationType="slide"
         transparent={true}
@@ -150,14 +206,14 @@ export default function SurveyHostView() {
           <View className="bg-white rounded-lg w-[90%] max-w-md">
             <View className="border-b mb-4 border-gray-300">
               <Text className="m-4 text-xl text-center font-semibold">
-                Delete Question
+                End Survey
               </Text>
             </View>
             <View className="px-5">
               <Text className="text-lg mb-2">Are you sure?</Text>
               <Text className="text-sm mb-6 text-gray-500">
-                This action cannot be undone. The question will be permanently
-                deleted.
+                This will end the survey for all participants. This action
+                cannot be undone.
               </Text>
 
               <View className="mb-6 flex-row justify-between">

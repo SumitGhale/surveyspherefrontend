@@ -3,10 +3,10 @@ import { Survey } from "@/models/survey";
 const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
 
 // Implementation for getting all surveys
-export const getAllSurveys = async () => {
+export const getAllSurveys = async (userId: string) => {
   try {
-    console.log("Fetching surveys from:", `${BASE_URL}surveys`);
-    const response = await fetch(`${BASE_URL}surveys`, {
+    console.log("Fetching surveys from:", `${BASE_URL}surveys/${userId}`);
+    const response = await fetch(`${BASE_URL}surveys/${userId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",

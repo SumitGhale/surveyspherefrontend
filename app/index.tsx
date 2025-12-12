@@ -10,31 +10,40 @@ import {
 } from "react-native";
 import { supabase } from "../lib/supabase";
 import { Session } from "@supabase/supabase-js";
+import { useAuth } from "@/contexts/userContext";
+import { LinearGradient } from "expo-linear-gradient";
+import PollyLogo from "@/components/icons/poly-logo";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("jam@mailinator.com");
-  const [password, setPassword] = useState("Jam1234");
+  const [email, setEmail] = useState("tam@mailinator.com");
+  const [password, setPassword] = useState("Tam1234");
   const [session, setSession] = useState<Session | undefined | null>();
-  const [profile, setProfile] = useState<any>();
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const { setUser } = useAuth();
 
-  // Fetch the session once, and subscribe to auth state changes
   useEffect(() => {
     const fetchSession = async () => {
-      setIsLoading(true);
       const {
         data: { session },
         error,
       } = await supabase.auth.getSession();
+
       if (error) {
         console.error("Error fetching session:", error);
       }
+
       setSession(session);
-      setIsLoading(false);
-      if (session) {
+
+      if (session?.user) {
+        // Set user in context
+        setUser({
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.user_metadata?.displayName || "John Doe",
+        });
         router.replace("/(tabs)");
       }
     };
+
     fetchSession();
 
     const {
@@ -42,30 +51,56 @@ export default function LoginPage() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       console.log("Auth state changed:", { event: _event, session });
       setSession(session);
+
+      if (_event === "SIGNED_IN" && session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.user_metadata?.displayName || "John Doe",
+        });
+      } else if (_event === "SIGNED_OUT") {
+        setUser(null);
+      }
     });
-    // Cleanup subscription on unmount
+
     return () => {
       subscription.unsubscribe();
     };
   }, []);
 
   async function signInWithEmail() {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: email,
       password: password,
     });
-    if (error) Alert.alert(error.message);
-    else router.replace("/(tabs)");
+
+    if (error) {
+      Alert.alert(error.message);
+    } else if (data.user) {
+      // Set user in context on successful login
+      setUser({
+        id: data.user.id,
+        email: data.user.email,
+      });
+      router.replace("/(tabs)");
+    }
   }
 
   const handleSignup = () => {
     router.push("/signup");
-    // Add navigation to signup page
   };
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={["#FFFFFF", "#F0FDF4", "#D1FAE5", "#10B981"]}
+      locations={[0, 0.4, 0.8, 1]}
+      style={styles.container}
+    >
       <View style={styles.main}>
+        <View style={{ alignItems: "center", marginBottom: 32 }}>
+          <PollyLogo size={100} />
+        </View>
+
         <Text style={styles.title}>Welcome Back</Text>
         <Text style={styles.subtitle}>Sign in to continue</Text>
 
@@ -97,7 +132,7 @@ export default function LoginPage() {
           </Pressable>
         </View>
       </View>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -137,9 +172,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: "#ddd",
+    shadowColor: "#ddd",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   loginButton: {
-    backgroundColor: "#007AFF",
+    backgroundColor: "#059669",
     paddingVertical: 14,
     borderRadius: 8,
     marginTop: 8,
@@ -154,11 +194,11 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     paddingVertical: 14,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#007AFF",
+    borderWidth: 2,
+    borderColor: "#059669",
   },
   signupButtonText: {
-    color: "#007AFF",
+    color: "#059669",
     fontSize: 16,
     fontWeight: "600",
     textAlign: "center",

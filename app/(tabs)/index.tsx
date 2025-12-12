@@ -24,22 +24,32 @@ import JoinIcon from "@/components/icons/join-icon";
 import CreateIcon from "@/components/icons/create-icon";
 import PollyLogo from "@/components/icons/poly-logo";
 import UserIcon from "@/components/icons/user-icon";
+import { useAuth } from "@/contexts/userContext";
 
 export default function HomeScreen() {
   const { surveys, setSurveys } = useSurveys();
   const [projectTitle, setProjectTitle] = useState("");
   const [modalVisible, setmodalVisible] = useState(false);
   const [code, setCode] = useState("");
+  const [loading, setLoading] = useState(true); // ✅ Add loading state
+  const { user } = useAuth();
   const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
 
   useEffect(() => {
     const fetchSurveys = async () => {
-      const surveyList = await getAllSurveys();
+      setLoading(true); // ✅ Set loading before fetch
+      const surveyList = await getAllSurveys(user?.id || "");
       if (surveyList) {
         setSurveys(surveyList);
       }
+      setLoading(false); // ✅ Stop loading after fetch
     };
-    fetchSurveys();
+
+    if (user?.id) {
+      fetchSurveys();
+    } else {
+      setLoading(false);
+    }
 
     const socket = io(BASE_URL);
 
@@ -72,7 +82,7 @@ export default function HomeScreen() {
       };
     };
     socket.on("surveyCreated", handleIncoming);
-  }, []);
+  }, [user?.id]);
 
   const joinSurvey = () => {
     // emit join survey event
@@ -90,7 +100,7 @@ export default function HomeScreen() {
   const createNewSurvey = async (surveyTitle: string) => {
     //  create a survey in database
     const newSurvey: Survey = {
-      host_id: "a95db083-e90d-432d-be54-81cf964d1d6d",
+      host_id: user?.id || "",
       title: surveyTitle,
       code: "XYZ123",
       status: "draft",
@@ -117,7 +127,10 @@ export default function HomeScreen() {
           <PollyLogo size={40} />
           <Text className="font-bold text-xl my-4 ">Poly</Text>
         </View>
-        <Pressable onPress={() => router.push("/profile")} style={{ marginRight: 16 }}>
+        <Pressable
+          onPress={() => router.push("/profile")}
+          style={{ marginRight: 16 }}
+        >
           <UserIcon size={35} />
         </Pressable>
       </View>
@@ -161,10 +174,14 @@ export default function HomeScreen() {
       <Text className="text-2xl font-semibold text-gray-800 mb-4 mt-6">
         Your Surveys
       </Text>
-      <View className=" flex flex-row flex-wrap justify-between ">
-        {surveys.length === 0 ? (
+      <View className="flex flex-row flex-wrap justify-between">
+        {loading ? ( // ✅ Check loading instead of surveys === null
           <View className="w-full items-center justify-center py-10">
             <ActivityIndicator size="large" color="#059669" />
+          </View>
+        ) : surveys.length === 0 ? ( // ✅ Show empty state
+          <View className="w-full items-center justify-center py-10">
+            <Text className="text-gray-500">No surveys yet</Text>
           </View>
         ) : (
           surveys.map((survey) => (

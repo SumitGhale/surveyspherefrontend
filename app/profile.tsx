@@ -3,8 +3,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import UserIcon from "@/components/icons/user-icon";
 import { supabase } from "@/lib/supabase";
 import { router } from "expo-router";
+import { useAuth } from "@/contexts/userContext";
 
 export default function ProfileScreen() {
+  const {user} = useAuth()
   const onLogout = async () => {
     // Handle logout logic here
     const { error } = await supabase.auth.signOut();
@@ -28,10 +30,10 @@ export default function ProfileScreen() {
           <View className="my-8 items-center ju">
             <UserIcon size={100} color="white" />
             <Text className="text-white text-center text-2xl mt-4">
-              User Name
+              {user?.name || "User Name"}
             </Text>
             <Text className="text-gray-100 text-center text-medium mt-2">
-              user@example.com
+              {user?.email || "user@example.com"}
             </Text>
             <View className="flex-row mt-4">
               <View className="border-r-2 border-white w-1/2">
