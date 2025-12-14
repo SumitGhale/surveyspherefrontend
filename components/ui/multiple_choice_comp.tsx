@@ -1,4 +1,4 @@
-import { View, Text } from "react-native";
+import { View, Text, Pressable } from "react-native";
 import { RadioButton } from "react-native-paper";
 
 type Props = {
@@ -9,7 +9,7 @@ type Props = {
 
 export default function MultipleChoiceOption({ label, selectedValue, onSelect }: Props) {
   return (
-    <View className="flex-row justify-between items-center p-4 my-2 border rounded-lg border-gray-200">
+    <Pressable onPress={() => onSelect(label)} className="flex-row justify-between items-center p-4 my-2 border rounded-lg border-gray-200">
       <Text>{label}</Text>
       <RadioButton
         color="#15A4EC"
@@ -17,6 +17,6 @@ export default function MultipleChoiceOption({ label, selectedValue, onSelect }:
         value={label}
         onPress={() => onSelect(label)}
       />
-    </View>
+    </Pressable>
   );
 }

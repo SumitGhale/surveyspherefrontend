@@ -55,6 +55,13 @@ export default function RootLayout() {
                 }}
               />
               <Stack.Screen
+              name="survey_host_view"
+              options={{
+                title: "Survey Host",
+                headerTitleAlign: "center",
+              }}
+              />
+              <Stack.Screen
                 name="question-builder"
                 options={{
                   title: "Question Builder",

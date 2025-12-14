@@ -6,11 +6,12 @@ import { io } from "socket.io-client";
 import { router, useLocalSearchParams } from "expo-router";
 import Card from "@/components/ui/white-container";
 import MultipleChoiceOption from "@/components/ui/multiple_choice_comp";
-import Slider from "@react-native-community/slider";
+import { Rating } from "react-native-ratings";
 import UnderlineTextField from "@/components/ui/underline_text_field";
 import { createResponse } from "@/services/response_service";
 import { Response } from "@/models/response";
 import Animated, { SlideInRight } from "react-native-reanimated";
+import { useAuth } from "@/contexts/userContext";
 
 // ✅ Move components OUTSIDE
 function OpenEndedOptions({
@@ -80,15 +81,18 @@ function RatingOptions({
   onChange: (val: number) => void;
 }) {
   return (
-    <Slider
-      style={{ width: 200, height: 40 }}
-      minimumValue={1}
-      maximumValue={5}
-      value={value}
-      onValueChange={onChange}
-      minimumTrackTintColor="#15A4EC"
-      maximumTrackTintColor="#d1d5db"
-    />
+    <View className="items-start">
+      <Rating
+        type="custom"
+        ratingColor="#059669"
+        startingValue={value}
+        imageSize={32}
+        minValue={1}
+        ratingCount={5}
+        onFinishRating={onChange}
+        tintColor="#f3f4f6"
+      />
+    </View>
   );
 }
 
@@ -96,8 +100,18 @@ export default function SurveyParticipantView() {
   const [questions, setQuestions] = useState<Question[] | null>(null);
   const [answer, setAnswer] = useState<string>("");
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [answeredQuestions, setAnsweredQuestions] = useState<Set<string>>(
+    new Set()
+  ); // ✅ Track answered questions
+  const { user } = useAuth();
 
   const { code } = useLocalSearchParams();
+
+  // ✅ Check if current question is already answered
+  const currentQuestionId = questions?.[currentQuestionIndex]?.id;
+  const hasAnswered = currentQuestionId
+    ? answeredQuestions.has(currentQuestionId)
+    : false;
 
   useEffect(() => {
     const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
@@ -130,31 +144,51 @@ export default function SurveyParticipantView() {
       console.log("Survey has ended.");
       router.replace("/(tabs)");
     });
+
     return () => {
       socket.disconnect();
     };
   }, []);
 
   const handleSubmitResponse = async () => {
-    if (questions) {
-      const questionId = questions[currentQuestionIndex]?.id;
-      if (!questionId) {
-        console.warn("Missing question ID. Unable to submit response.");
-        return;
-      }
+    if (!questions || !currentQuestionId) {
+      console.warn("Missing question data. Unable to submit response.");
+      return;
+    }
 
-      const response: Response = {
-        question_id: questionId,
-        participant_id: "a95db083-e90d-432d-be54-81cf964d1d6d",
-        answer,
-      };
+    // ✅ Prevent duplicate submission
+    if (hasAnswered) {
+      console.log("Already answered this question");
+      return;
+    }
 
-      try {
-        const data = await createResponse(response);
-        setAnswer("");
-        console.log("Response submitted successfully:", data);
-      } catch (error) {
-        console.error("Error submitting response:", error);
+    // ✅ Validate answer exists
+    if (!answer || answer.trim() === "") {
+      console.warn("Please provide an answer");
+      return;
+    }
+
+    const response: Response = {
+      question_id: currentQuestionId,
+      participant_id: user?.id,
+      answer,
+    };
+
+    try {
+      const data = await createResponse(response);
+
+      // ✅ Mark question as answered
+      setAnsweredQuestions((prev) => new Set(prev).add(currentQuestionId));
+
+      console.log("Response submitted successfully:", data);
+    } catch (error) {
+      console.error("Error submitting response:", error);
+      // ✅ Handle duplicate error from backend
+      if (
+        error instanceof Error &&
+        error.message.includes("Already answered")
+      ) {
+        setAnsweredQuestions((prev) => new Set(prev).add(currentQuestionId));
       }
     }
   };
@@ -182,7 +216,7 @@ export default function SurveyParticipantView() {
       case "rating":
         return (
           <RatingOptions
-            value={parseFloat(answer) || 1}
+            value={parseFloat(answer) || 0}
             onChange={(val) => setAnswer(val.toString())}
           />
         );
@@ -203,7 +237,10 @@ export default function SurveyParticipantView() {
 
   return (
     <KeyboardAvoidingView className="p-3 bg-background-gray flex-1">
-      <Animated.View key={currentQuestionIndex} entering={SlideInRight.duration(400)}>
+      <Animated.View
+        key={currentQuestionIndex}
+        entering={SlideInRight.duration(400)}
+      >
         <Text className="font-bold text-3xl tracking-wider mb-6">
           {questions[currentQuestionIndex].text}
         </Text>
@@ -213,16 +250,24 @@ export default function SurveyParticipantView() {
         <View className="mt-auto gap-3 pb-6">
           <Pressable
             onPress={handleSubmitResponse}
-            className="bg-primary-blue p-3 rounded-lg items-center"
+            disabled={hasAnswered} // ✅ Disable if already answered
+            className={`p-3 rounded-lg items-center ${
+              hasAnswered ? "bg-gray-400" : "bg-primary-blue"
+            }`}
           >
-            <Text className="text-white font-semibold">Submit</Text>
+            <Text className="text-white font-semibold">
+              {hasAnswered ? "✓ Submitted" : "Submit"}
+            </Text>
           </Pressable>
 
           <Pressable
-            onPress={() => console.log("Survey ended")}
+            onPress={() => {
+              console.log("Survey ended by participant");
+              router.replace("/(tabs)");
+            }}
             className="p-3 rounded-lg items-center"
           >
-            <Text className="text-red-500 font-semibold">End Survey</Text>
+            <Text className="text-red-500 font-semibold">Leave Survey</Text>
           </Pressable>
         </View>
       </Animated.View>

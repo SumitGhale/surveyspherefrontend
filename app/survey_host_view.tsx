@@ -1,8 +1,8 @@
-import { View, Text, Pressable } from "react-native";
+import { View, Text, Pressable, BackHandler } from "react-native";
 import { useQuestions } from "@/contexts/questionContext";
 import { useRef, useState, useEffect } from "react";
 import { io, Socket } from "socket.io-client";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import BarGraph from "@/components/bar_graph";
 import Pie_Chart from "@/components/pie_Chart";
 import WordCloudComponent from "@/components/word_cloud";
@@ -22,6 +22,8 @@ export default function SurveyHostView() {
 
   const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
   const socketRef = useRef<Socket | null>(null);
+  const navigation = useNavigation();
+  const allowLeaveRef = useRef(false);
 
   const copyToClipboard = async () => {
     await Clipboard.setStringAsync(roomCode as string);
@@ -85,6 +87,34 @@ export default function SurveyHostView() {
     };
   }, [BASE_URL, roomCode, currentQuestionIndex]);
 
+  // Intercept back navigation (header back + hardware back) to confirm ending survey
+  useEffect(() => {
+    const handleBeforeRemove = (e: any) => {
+      if (allowLeaveRef.current) return;
+      e.preventDefault();
+      setModalVisible(true);
+    };
+
+    const unsubscribeNav = navigation.addListener(
+      "beforeRemove",
+      handleBeforeRemove
+    );
+
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        if (allowLeaveRef.current) return false;
+        setModalVisible(true);
+        return true; // prevent default back action
+      }
+    );
+
+    return () => {
+      unsubscribeNav();
+      backHandler.remove();
+    };
+  }, [navigation]);
+
   //  code to render different result components based on question type
   const renderResult = () => {
     if (!responses) return null;
@@ -118,6 +148,7 @@ export default function SurveyHostView() {
   };
 
   const endSurvey = () => {
+    allowLeaveRef.current = true;
     setModalVisible(false);
     socketRef.current?.emit("endSurvey", { roomCode });
     router.replace("/(tabs)");
